@@ -61,7 +61,7 @@ namespace ServerTrack
 
             // Member variables  
 
-            bool m_TimeIsSet;
+            bool m_TimeIsSet;       //  So we only set the first time
             public DateTime m_Time; //  Time of node creation 
             public double m_CPUloadSum;
             public double m_RAMloadSum;
@@ -110,8 +110,8 @@ namespace ServerTrack
 
             public void UpdateNode(ServerLoadStatsNode Node)
             {
-                Node.m_CPUloadAverage = m_CPUloadAverage;
-                Node.m_RAMloadAverage = m_RAMloadAverage;
+                Node.CPUloadAverage = m_CPUloadAverage;
+                Node.RAMloadAverage = m_RAMloadAverage;
             }
 
             public ServerLoadStatsNode NewNode()
@@ -129,15 +129,16 @@ namespace ServerTrack
         public class ServerLoadStatsNode
         {
 
-            public ServerLoadStatsNode(double CPU_loadAverage,
-                                  double RAM_loadAverage)
+            public ServerLoadStatsNode(double _CPU_loadAverage,
+                                  double _RAM_loadAverage)
                 {
-                m_CPUloadAverage = CPU_loadAverage;
-                m_RAMloadAverage = RAM_loadAverage;
+                    CPUloadAverage = _CPU_loadAverage;
+                    RAMloadAverage = _RAM_loadAverage;
                 }
 
-            public double m_CPUloadAverage;
-            public double m_RAMloadAverage;
+            public double CPUloadAverage { get; set; }
+            public double RAMloadAverage { get; set; }
+
 
             }
 
@@ -245,7 +246,6 @@ namespace ServerTrack
             public ServerLoadStatsNode[] GetLoadData()
             {
 
-
                 ServerLoadStatsNode[] LoadData = null;
 
                 lock (QueLock)
@@ -287,6 +287,18 @@ namespace ServerTrack
             }
 
         }
+
+        //
+        //  ServerLoadStats returne by Displayloads() 
+        //
+
+        public class ServerLoadStats 
+            {
+
+            public ServerLoadStatsNode[] Data60Minutes;
+            public ServerLoadStatsNode[] Data24Hour;
+
+            };
 
         //
         //  Server List 
@@ -353,25 +365,21 @@ namespace ServerTrack
                 return true;
             }
 
-            public bool Displayloads(String Name)
+            public bool Displayloads(String Name, ServerLoadStats LoadStats)
             {
-              
+
+                //
+                // Get Server 
+                //
 
                 ServerNode Server = GetServer(Name);
 
-                Console.WriteLine("\n60 minutes broken down by minute");
-                ServerLoadStatsNode[] LoadData = Server.Que60Min.GetLoadData();
-                foreach (ServerLoadStatsNode nd in LoadData) 
-                {
-                    Console.WriteLine(" CPU  {0} RAM  {1}", nd.m_CPUloadAverage, nd.m_RAMloadAverage);
-                }
+                //
+                // Get server load data 
+                //
 
-                Console.WriteLine("24 hours broken down by hour");
-                ServerLoadStatsNode[] LoadData2 = Server.Que24Hour.GetLoadData();
-                foreach (ServerLoadStatsNode nd in LoadData2)
-                {
-                    Console.WriteLine(" CPU  {0} RAM  {1}", nd.m_CPUloadAverage, nd.m_RAMloadAverage);
-                }
+                LoadStats.Data60Minutes = Server.Que60Min.GetLoadData();
+                LoadStats.Data24Hour = Server.Que24Hour.GetLoadData();
                 
                 return true;
             }
@@ -435,8 +443,32 @@ namespace ServerTrack
             while(true)
             {
 
-            Servers.Displayloads("A");
-            Thread.Sleep(100);
+
+                //
+                //  Get load data 
+                //
+
+                ServerLoadStats LoadStats = new ServerLoadStats();
+
+                Servers.Displayloads("A", LoadStats);
+
+                //
+                // Display load data 
+                //
+
+                Console.WriteLine("\n60 minutes broken down by minute");
+
+                foreach (ServerLoadStatsNode nd in LoadStats.Data60Minutes)
+                {
+                    Console.WriteLine(" CPU  {0} RAM  {1}", nd.CPUloadAverage, nd.RAMloadAverage);
+                }
+
+                Console.WriteLine("24 hours broken down by hour");
+                foreach (ServerLoadStatsNode nd in LoadStats.Data24Hour)
+                {
+                    Console.WriteLine(" CPU  {0} RAM  {1}", nd.CPUloadAverage, nd.RAMloadAverage);
+                }
+                Thread.Sleep(100);
 
             }
         }
